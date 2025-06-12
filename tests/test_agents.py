@@ -30,9 +30,12 @@ from google.adk.artifacts import InMemoryArtifactService
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 
-from data_science.agent import root_agent
-from data_science.sub_agents.bqml.agent import root_agent as bqml_agent
-from data_science.sub_agents.bigquery.agent import database_agent
+from data_analyst.agent import root_agent
+from data_analyst.sub_agents.bqml.agent import root_agent as bqml_agent
+from data_analyst.sub_agents.bigquery.agent import database_agent
+from data_analyst.sub_agents.search.agent import search_agent
+from data_analyst.agent import should_enable_google_search, enable_google_search
+from data_analyst.tools import call_search_agent
 
 pytest_plugins = ("pytest_asyncio",)
 
@@ -144,8 +147,8 @@ async def test_google_search_disabled_by_default():
 @pytest.mark.google_search_functional
 async def test_google_search_conditional_logic():
     """Test the conditional logic for Google Search without module reloading."""
-    from data_science.sub_agents.search.agent import search_agent
-    from data_science.agent import should_enable_google_search, enable_google_search
+    from data_analyst.sub_agents.search.agent import search_agent
+    from data_analyst.agent import should_enable_google_search, enable_google_search
     
     # Test 1: Verify search_agent is None when disabled (which it should be in tests)
     assert search_agent is None, "search_agent should be None when ENABLE_GOOGLE_SEARCH=false"
@@ -155,7 +158,7 @@ async def test_google_search_conditional_logic():
     assert enable_google_search == False, "enable_google_search should be False"
     
     # Test 3: Verify tools don't contain call_search_agent
-    from data_science.tools import call_search_agent
+    from data_analyst.tools import call_search_agent
     # call_search_agent should be a function but shouldn't be added to tools
     assert callable(call_search_agent), "call_search_agent should be callable"
     
@@ -168,8 +171,8 @@ async def test_google_search_conditional_logic():
 @pytest.mark.google_search_integration
 async def test_call_search_agent_when_disabled():
     """Test that call_search_agent handles disabled state correctly."""
-    from data_science.tools import call_search_agent
-    from data_science.sub_agents.search.agent import search_agent
+    from data_analyst.tools import call_search_agent
+    from data_analyst.sub_agents.search.agent import search_agent
     
     # Verify that search_agent is None (disabled)
     assert search_agent is None, "search_agent should be None when Google Search is disabled"

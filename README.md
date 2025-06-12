@@ -36,16 +36,16 @@ The agent maintains the original multi-agent architecture with an additional sea
 The Google Search functionality follows the established sub-agent pattern:
 
 ```
-data_science/sub_agents/search/
+data_analyst/sub_agents/search/
 ├── __init__.py          # Empty (just copyright)
 ├── agent.py            # Contains search_agent = Agent(...)
 └── prompts.py          # Contains return_instructions_search()
 ```
 
 **Integration Points:**
-- `data_science/sub_agents/__init__.py` - Imports `search_agent`
-- `data_science/tools.py` - Contains `async def call_search_agent()`
-- `data_science/agent.py` - Conditionally includes `call_search_agent` in tools
+- `data_analyst/sub_agents/__init__.py` - Imports `search_agent`
+- `data_analyst/tools.py` - Contains `async def call_search_agent()`
+- `data_analyst/agent.py` - Conditionally includes `call_search_agent` in tools
 
 **Conditional Behavior:**
 - When `ENABLE_GOOGLE_SEARCH=true`: Search agent is created and included in tools
@@ -99,7 +99,7 @@ Enable real-time web search functionality:
 #### BQML Reference Documentation (Optional)
 Set up RAG corpus with BigQuery ML documentation:
     ```bash
-    python3 data_science/utils/reference_guide_RAG.py
+    python3 data_analyst/utils/reference_guide_RAG.py
     ```
 
 #### Document Retrieval (Optional)
@@ -117,14 +117,14 @@ export BUSINESS_RAG_CORPUS='projects/your-project/locations/us-central1/ragCorpo
 
 ### CLI Mode
     ```bash
-    poetry run adk run data_science
+    poetry run adk run data_analyst
     ```
 
 ### Web UI Mode
     ```bash
     poetry run adk web
     ```
-Then select `data_science` from the dropdown.
+Then select `data_analyst` from the dropdown.
 
 ## Example Interactions
 
@@ -174,7 +174,7 @@ Current test coverage: **51%** with **7/7 tests passing** ✅
 
 To run tests with coverage report:
 ```bash
-poetry run pytest tests/ --cov=data_science --cov-report=term-missing
+poetry run pytest tests/ --cov=data_analyst --cov-report=term-missing
 ```
 
 **Google Search Testing Notes**: 
