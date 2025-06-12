@@ -1,0 +1,15 @@
+google-cloud-aiplatform[reasoningengine,adk]
+pandas
+pyarrow
+google-cloud-bigquery
+db-dtypes
+llama-index
+python-dotenv
+google-adk
+immutabledict
+sqlglot
+regex
+tabulate
+absl-py
+pydantic
+cloudpickle 

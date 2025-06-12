@@ -1,6 +1,74 @@
 # GCP Data Analyst Agent
 
-This is an enhanced version of Google's [Data Science Agent sample](https://github.com/GoogleCloudPlatform/adk-samples/tree/main/python/agents/data-science) from the Agent Development Kit (ADK). The original agent provides a multi-agent system for data science workflows with BigQuery integration, analytics capabilities, and BQML support.
+This is an enhanced version of Google's [Data Science Agent sample](https://github.com/GoogleCloudPlatform/adk-samples/tree/main/python/agents/data-science) from the Agent Development Kit (ADK). It provides a multi-agent system for data science workflows with BigQuery integration, analytics capabilities, and BQML support, ready to be deployed on Vertex AI.
+
+## Quick Start
+
+### Prerequisites
+
+*   Python 3.11+ and [Poetry](httpss://python-poetry.org/docs/#installation)
+*   [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) installed and authenticated.
+*   A Google Cloud Project with billing, BigQuery, and Vertex AI APIs enabled.
+
+### 1. Setup
+
+First, clone the repository and install the required Python dependencies using Poetry.
+
+```bash
+git clone <your-repo-url>
+cd gcp-data-analyst-agent
+poetry install
+```
+
+Next, create a `.env` file from the example template. This file will hold the environment variables your agent needs to connect to the correct GCP resources.
+
+```bash
+cp .env.example .env
+```
+
+Now, open the `.env` file and fill in the values for your specific GCP project and BigQuery dataset.
+
+### 2. Deployment to Vertex AI
+
+With the setup complete, deploying the agent to a managed, serverless environment on Vertex AI is a two-step process.
+
+First, package the agent's code into a Python wheel file. This command builds the wheel and places it in a `dist/` directory.
+
+```bash
+poetry build --format=wheel
+```
+
+Second, run the deployment script. This script reads your `.env` file, connects to your GCP project, and uploads the agent and its dependencies to a new Vertex AI Agent Engine.
+
+```bash
+poetry run python3 deploy.py
+```
+
+If successful, the script will print the resource name of your newly deployed agent, which will look something like this:
+`projects/your-project-number/locations/us-central1/reasoningEngines/your-agent-id`
+
+### 3. Testing the Deployed Agent
+
+Once the agent is deployed, you can test it by running the `test_agent.py` script. This script sends a sample query to your agent and prints the streaming response.
+
+Before running it, open `test_agent.py` and replace the placeholder `AGENT_RESOURCE_NAME` with the full resource name you received from the deployment step.
+
+After updating the resource name, run the test script:
+
+```bash
+poetry run python3 test_agent.py
+```
+
+You should see the agent's response streamed to your console.
+
+## Local Development and Testing
+
+You can run unit tests to ensure the agent's components are working correctly.
+
+```bash
+poetry install --with=dev
+poetry run pytest tests/
+```
 
 ## What's Enhanced
 
@@ -50,219 +118,6 @@ data_analyst/sub_agents/search/
 **Conditional Behavior:**
 - When `ENABLE_GOOGLE_SEARCH=true`: Search agent is created and included in tools
 - When `ENABLE_GOOGLE_SEARCH=false` or unset: Search agent is `None`, graceful fallback message
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.11+
-- Google Cloud Project with billing enabled
-- BigQuery API enabled
-- Vertex AI API enabled
-
-### Installation
-
-1. **Clone and setup:**
-    ```bash
-   git clone <your-repo-url>
-   cd gcp-data-analyst-agent
-    poetry install
-    ```
-
-2. **Environment setup:**
-    ```bash
-   cp .env.example .env
-   # Edit .env with your Google Cloud project details
-    ```
-
-3. **Required environment variables:**
-    ```bash
-   export GOOGLE_CLOUD_PROJECT='your-project-id'
-   export BQ_PROJECT_ID='your-bigquery-project-id'
-   export BQ_DATASET_ID='your-dataset-id'
-    ```
-
-### Optional Setup
-
-#### Your BigQuery Data
-The agent works with any BigQuery dataset. Make sure your BigQuery dataset exists and update your environment variables:
-        ```bash
-        export BQ_DATASET_ID='your-dataset-name'
-        ```
-
-#### Google Search (Optional)
-Enable real-time web search functionality:
-    ```bash
-    export ENABLE_GOOGLE_SEARCH=true
-    ```
-
-#### BQML Reference Documentation (Optional)
-Set up RAG corpus with BigQuery ML documentation:
-    ```bash
-    python3 data_analyst/utils/reference_guide_RAG.py
-    ```
-
-#### Document Retrieval (Optional)
-To enable custom business document retrieval, set up your own RAG corpus:
-    ```bash
-export BUSINESS_RAG_CORPUS='projects/your-project/locations/us-central1/ragCorpora/your-business-corpus-id'
-    ```
-
-**Note**: 
-- Replace `your-project` and `your-business-corpus-id` with your actual values
-- This is separate from the BQML technical documentation corpus
-- Use this for business-specific documents, KPIs, and domain knowledge
-
-## Usage
-
-### CLI Mode
-    ```bash
-    poetry run adk run data_analyst
-    ```
-
-### Web UI Mode
-    ```bash
-    poetry run adk web
-    ```
-Then select `data_analyst` from the dropdown.
-
-## Example Interactions
-
-**Data Exploration:**
-```
-User: What data do you have access to?
-Agent: I have access to two tables: train and test. Both contain sales data with columns: id, date, country, store, product, and num_sold.
-```
-
-**Analytics:**
-```
-User: Create a visualization showing sales by country
-Agent: [Generates Python code and creates a bar chart visualization]
-```
-
-**Machine Learning:**
-```
-User: Can you train a forecasting model?
-Agent: I can help you train ARIMA, ARIMA_PLUS, or other BQML forecasting models. What time series data would you like to forecast?
-```
-
-**Real-time Information (when Google Search enabled):**
-```
-User: What are the latest trends in data science?
-Agent: [Uses Google Search to find current information about data science trends]
-```
-
-## Testing
-
-Run the test suite:
-```bash
-poetry install --with=dev
-poetry run pytest tests
-```
-
-### Test Coverage
-
-Current test coverage: **51%** with **7/7 tests passing** ✅
-
-- ✅ **Database Agent**: Tests SQL query execution
-- ✅ **Data Science Agent**: Tests root agent integration with sub-agents
-- ✅ **BQML Agent**: Tests model checking functionality  
-- ✅ **BQML Agent**: Tests execution planning workflow
-- ✅ **Google Search Disabled**: Tests that search is properly disabled by default
-- ✅ **Google Search Logic**: Tests conditional logic and configuration
-- ✅ **Google Search Integration**: Tests graceful handling when disabled
-
-To run tests with coverage report:
-```bash
-poetry run pytest tests/ --cov=data_analyst --cov-report=term-missing
-```
-
-**Google Search Testing Notes**: 
-- Tests verify proper configuration and conditional behavior
-- Search agent isolation prevents Google API "multiple tools" limitation
-- Tests pass in both enabled/disabled states
-- Production functionality requires Google Search API access
-
-## Deployment on Vertex AI Agent Engine
-
-### Prerequisites for Production Deployment
-
-Before deploying to Vertex AI Agent Engine, you need to set up authentication for production use.
-
-**Important**: This is different from development authentication!
-- **Development**: Uses your personal credentials (`gcloud auth application-default login`)
-- **Production**: Uses Google-managed Vertex AI service account with BigQuery permissions
-
-### Step 1: Set Up IAM Permissions
-
-When you deploy to Vertex AI Agent Engine, Google automatically creates a **Reasoning Engine Service Agent** to run your agent. You need to grant this service account permissions to access BigQuery.
-
-1. **Get your project number:**
-   ```bash
-   export GOOGLE_CLOUD_PROJECT=your-project-id
-   export GOOGLE_CLOUD_PROJECT_NUMBER=$(gcloud projects describe $GOOGLE_CLOUD_PROJECT --format="value(projectNumber)")
-   ```
-
-2. **Grant BigQuery permissions to the Agent Engine service account:**
-   ```bash
-   export RE_SA="service-${GOOGLE_CLOUD_PROJECT_NUMBER}@gcp-sa-aiplatform-re.iam.gserviceaccount.com"
-   
-   gcloud projects add-iam-policy-binding ${GOOGLE_CLOUD_PROJECT} \
-       --member="serviceAccount:${RE_SA}" \
-       --condition=None \
-       --role="roles/bigquery.user"
-   
-   gcloud projects add-iam-policy-binding ${GOOGLE_CLOUD_PROJECT} \
-       --member="serviceAccount:${RE_SA}" \
-       --condition=None \
-       --role="roles/bigquery.dataViewer"
-   
-   gcloud projects add-iam-policy-binding ${GOOGLE_CLOUD_PROJECT} \
-       --member="serviceAccount:${RE_SA}" \
-       --condition=None \
-       --role="roles/aiplatform.user"
-   ```
-
-**Note**: This service account is automatically created by Google - you don't create it manually. The `@gcp-sa-aiplatform-re.iam.gserviceaccount.com` domain indicates it's a Google-managed service agent specifically for AI Platform Reasoning Engine.
-
-### Step 2: Deploy Your Agent
-
-1. **Build the wheel:**
-   ```bash
-   poetry build --format=wheel --output=deployment
-   ```
-
-2. **Deploy to Vertex AI:**
-   ```bash
-   cd deployment/
-   python3 deploy.py --create
-   ```
-
-   This will output a resource ID like:
-   ```
-   projects/************/locations/us-central1/reasoningEngines/7737333693403889664
-   ```
-
-3. **Test your deployed agent:**
-   ```bash
-   export RESOURCE_ID=your-resource-id
-   export USER_ID=test-user
-   python test_deployment.py --resource_id=$RESOURCE_ID --user_id=$USER_ID
-   ```
-
-4. **Delete the agent (when needed):**
-   ```bash
-   python3 deploy.py --delete --resource_id=$RESOURCE_ID
-   ```
-
-### How Production Authentication Works
-
-Once deployed:
-- **Users interact** with your agent via Vertex AI API
-- **No BigQuery credentials required** from end users
-- **Agent uses service account** to query BigQuery on behalf of users
-- **Multi-tenant**: Multiple users can use the same agent safely
-- **Secure**: Users never see BigQuery directly, only agent responses
 
 ## Configuration Options
 

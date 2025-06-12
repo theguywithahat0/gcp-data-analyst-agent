@@ -1,11 +1,10 @@
 [tool.poetry]
-name = "data_analyst"
+name = "data-analyst"
 version = "0.1"
 description = "GCP Data Analyst Agent - Multi-Agent System for BigQuery Analytics and ML"
 authors = ["Meltem Subasioglu <msubasioglu@google.com>"]
 license = "Apache License 2.0"
 readme = "README.md"
-package-mode = true
 packages = [{include = "data_analyst"}]
 
 
