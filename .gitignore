@@ -223,4 +223,18 @@ $RECYCLE.BIN/
 # Local configuration
 config.local.yaml
 config.local.json
-local_config.py 
+local_config.py
+
+# Test files and temporary scripts (excluded from repo)
+test_*.py
+debug_*.py
+deployment*.log
+check_*.py
+setup_*.py
+interactive_*.py
+simple_*.py
+fixed_*.py
+final_*.py
+
+# Keep verification script (useful utility)
+!verify_deployment.py 

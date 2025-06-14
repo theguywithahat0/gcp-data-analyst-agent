@@ -19,23 +19,19 @@ import sys
 import pytest
 import asyncio
 
-# Set minimal configuration for tests to avoid optional tool configuration issues
-os.environ["ENABLE_BQML"] = "false"
-os.environ["ENABLE_GOOGLE_SEARCH"] = "false"
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from deepeval import assert_test
+from deepeval.metrics import AnswerRelevancyMetric
+from deepeval.test_case import LLMTestCase
+from tests.google_vertex_ai import GoogleVertexAI
 from google.genai import types
 from google.adk.artifacts import InMemoryArtifactService
-from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService
-
+from google.adk.sessions import Session, InMemorySessionService
 from data_analyst.agent import root_agent
-from data_analyst.sub_agents.bqml.agent import root_agent as bqml_agent
-from data_analyst.sub_agents.bigquery.agent import database_agent
-from data_analyst.sub_agents.search.agent import search_agent
-from data_analyst.agent import should_enable_google_search, enable_google_search
-from data_analyst.tools import call_search_agent
+from data_analyst.sub_agents.bigquery.agent import agent as database_agent
+from data_analyst.sub_agents.data_science.agent import agent as ds_agent
+from data_analyst.tools import call_db_agent, call_ds_agent
 
 pytest_plugins = ("pytest_asyncio",)
 
@@ -92,6 +88,12 @@ async def test_db_agent_can_handle_env_query(test_setup):
     response = await _run_agent(setup, database_agent, query)
     print(response)
     assert response is not None
+
+    # DeepEval Assertion
+    model = GoogleVertexAI(model_name="gemini-1.5-flash-002", project=os.environ["GOOGLE_CLOUD_PROJECT"], location="us-central1")
+    metric = AnswerRelevancyMetric(threshold=0.7, model=model)
+    test_case = LLMTestCase(input=query, actual_output=response)
+    assert_test(test_case, [metric])
 
 @pytest.mark.asyncio
 @pytest.mark.ds_agent
