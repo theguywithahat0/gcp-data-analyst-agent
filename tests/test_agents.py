@@ -28,9 +28,9 @@ from tests.google_vertex_ai import GoogleVertexAI
 from google.genai import types
 from google.adk.artifacts import InMemoryArtifactService
 from google.adk.sessions import Session, InMemorySessionService
+from google.adk.runners import Runner
 from data_analyst.agent import root_agent
-from data_analyst.sub_agents.bigquery.agent import agent as database_agent
-from data_analyst.sub_agents.data_science.agent import agent as ds_agent
+from data_analyst.sub_agents import db_agent, ds_agent, bqml_agent
 from data_analyst.tools import call_db_agent, call_ds_agent
 
 pytest_plugins = ("pytest_asyncio",)
@@ -80,17 +80,28 @@ async def _run_agent(setup, agent, query):
 
 
 @pytest.mark.asyncio
+@pytest.mark.root_agent
+async def test_root_agent_basic_functionality(test_setup):
+    """Test the root agent with a basic query."""
+    setup = await test_setup
+    query = "Hello! Can you help me with data analysis?"
+    response = await _run_agent(setup, root_agent, query)
+    print(f"Root agent response: {response}")
+    assert response is not None
+    assert len(response) > 0
+
+@pytest.mark.asyncio
 @pytest.mark.db_agent
 async def test_db_agent_can_handle_env_query(test_setup):
     """Test the db_agent with a query from environment variable."""
     setup = await test_setup
-    query = "what countries exist in the train table?"
-    response = await _run_agent(setup, database_agent, query)
-    print(response)
+    query = "what tables are available in the dataset?"
+    response = await _run_agent(setup, db_agent, query)
+    print(f"DB agent response: {response}")
     assert response is not None
 
     # DeepEval Assertion
-    model = GoogleVertexAI(model_name="gemini-1.5-flash-002", project=os.environ["GOOGLE_CLOUD_PROJECT"], location="us-central1")
+    model = GoogleVertexAI(model_name="gemini-2.0-flash-001", project=os.environ["GOOGLE_CLOUD_PROJECT"], location="us-central1")
     metric = AnswerRelevancyMetric(threshold=0.7, model=model)
     test_case = LLMTestCase(input=query, actual_output=response)
     assert_test(test_case, [metric])
@@ -100,9 +111,9 @@ async def test_db_agent_can_handle_env_query(test_setup):
 async def test_ds_agent_can_be_called_from_root(test_setup):
     """Test the ds_agent from the root agent."""
     setup = await test_setup
-    query = "plot the most selling category"
+    query = "analyze the customer data and create a simple visualization"
     response = await _run_agent(setup, root_agent, query)
-    print(response)
+    print(f"DS agent via root response: {response}")
     assert response is not None
 
 @pytest.mark.asyncio
@@ -112,7 +123,7 @@ async def test_bqml_agent_can_check_for_models(test_setup):
     setup = await test_setup
     query = "Are there any existing models in the dataset?"
     response = await _run_agent(setup, bqml_agent, query)
-    print(response)
+    print(f"BQML agent response: {response}")
     assert response is not None
 
 @pytest.mark.asyncio
@@ -121,68 +132,97 @@ async def test_bqml_agent_can_execute_code(test_setup):
     """Test that the bqml_agent can execute BQML code."""
     setup = await test_setup
     query = """
-    I want to train a BigQuery ML model on the sales_train_validation data for sales prediction.
+    I want to train a BigQuery ML model on the customer data for prediction.
     Please show me an execution plan. 
     """
     response = await _run_agent(setup, bqml_agent, query)
-    print(response)
+    print(f"BQML execution plan response: {response}")
     assert response is not None
 
 @pytest.mark.asyncio
-@pytest.mark.google_search
-async def test_google_search_disabled_by_default():
-    """Test that Google Search is disabled by default in the test environment."""
-    # Import the current root_agent (which should have Google Search disabled)
-    function_names = [tool.__name__ for tool in root_agent.tools if hasattr(tool, '__name__')]
+@pytest.mark.root_agent
+async def test_root_agent_tool_availability():
+    """Test that the root agent has the expected tools."""
+    # Check that root_agent has the expected tools
+    tool_names = []
+    for tool in root_agent.tools:
+        if hasattr(tool, '__name__'):
+            tool_names.append(tool.__name__)
+        elif hasattr(tool, 'name'):
+            tool_names.append(tool.name)
+        else:
+            tool_names.append(str(type(tool)))
     
-    # Verify call_search_agent is not present (Google Search is disabled)
-    assert "call_search_agent" not in function_names, "Google Search should be disabled by default in tests"
+    print(f"Available tools: {tool_names}")
     
     # Verify we have the expected basic tools
-    assert "call_db_agent" in function_names, "DB agent should be present"
-    assert "call_ds_agent" in function_names, "DS agent should be present"
+    assert "call_db_agent" in tool_names, "DB agent should be present"
+    assert "call_ds_agent" in tool_names, "DS agent should be present"
+    assert "load_artifacts" in tool_names, "load_artifacts should be present"
     
-    print("✅ Google Search correctly disabled by default")
-    print(f"Available function tools: {function_names}")
+    # Check if document retrieval is available (depends on BUSINESS_RAG_CORPUS)
+    has_doc_retrieval = any("retrieve_documentation" in str(tool) for tool in root_agent.tools)
+    print(f"Document retrieval available: {has_doc_retrieval}")
 
 @pytest.mark.asyncio
-@pytest.mark.google_search_functional
-async def test_google_search_conditional_logic():
-    """Test the conditional logic for Google Search without module reloading."""
-    from data_analyst.sub_agents.search.agent import search_agent
-    from data_analyst.agent import should_enable_google_search, enable_google_search
+@pytest.mark.root_agent
+async def test_root_agent_sub_agents():
+    """Test that the root agent has the expected sub-agents."""
+    # Check that root_agent has BQML sub-agent
+    sub_agent_names = [agent.name for agent in root_agent.sub_agents]
+    print(f"Available sub-agents: {sub_agent_names}")
     
-    # Test 1: Verify search_agent is None when disabled (which it should be in tests)
-    assert search_agent is None, "search_agent should be None when ENABLE_GOOGLE_SEARCH=false"
-    
-    # Test 2: Verify the conditional function works correctly
-    assert should_enable_google_search() == False, "should_enable_google_search() should return False"
-    assert enable_google_search == False, "enable_google_search should be False"
-    
-    # Test 3: Verify tools don't contain call_search_agent
-    from data_analyst.tools import call_search_agent
-    # call_search_agent should be a function but shouldn't be added to tools
-    assert callable(call_search_agent), "call_search_agent should be callable"
-    
-    print("✅ Google Search conditional logic works correctly")
-    print(f"search_agent: {search_agent}")
-    print(f"should_enable_google_search(): {should_enable_google_search()}")
-    print(f"enable_google_search: {enable_google_search}")
+    # BQML should always be enabled in our simplified framework
+    assert len(root_agent.sub_agents) > 0, "Root agent should have sub-agents"
+    assert any("bqml" in name.lower() or "bq_ml" in name.lower() for name in sub_agent_names), "BQML agent should be present"
 
-@pytest.mark.asyncio  
-@pytest.mark.google_search_integration
-async def test_call_search_agent_when_disabled():
-    """Test that call_search_agent handles disabled state correctly."""
-    from data_analyst.tools import call_search_agent
-    from data_analyst.sub_agents.search.agent import search_agent
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_root_agent_database_integration(test_setup):
+    """Test that the root agent can successfully call the database agent."""
+    setup = await test_setup
+    query = "Show me the schema of the available tables"
+    response = await _run_agent(setup, root_agent, query)
+    print(f"Database integration response: {response}")
+    assert response is not None
+    assert len(response) > 50  # Should be a substantial response
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_root_agent_bqml_integration(test_setup):
+    """Test that the root agent can route to BQML agent when requested."""
+    setup = await test_setup
+    query = "I want to use BigQuery ML to create a model. Can you help me?"
+    response = await _run_agent(setup, root_agent, query)
+    print(f"BQML integration response: {response}")
+    assert response is not None
+    # Should mention BQML or machine learning
+    assert any(keyword in response.lower() for keyword in ["bqml", "bigquery ml", "machine learning", "model"])
+
+@pytest.mark.asyncio
+@pytest.mark.simplified_framework
+async def test_simplified_framework_no_search():
+    """Test that our simplified framework has no search functionality."""
+    # Verify that search-related functionality is completely removed
+    tool_names = [tool.__name__ for tool in root_agent.tools if hasattr(tool, '__name__')]
     
-    # Verify that search_agent is None (disabled)
-    assert search_agent is None, "search_agent should be None when Google Search is disabled"
+    # Should not have any search-related tools
+    search_related = [name for name in tool_names if 'search' in name.lower()]
+    assert len(search_related) == 0, f"Found search-related tools: {search_related}"
     
-    # Since we can't easily create a ToolContext in tests, we test the logic directly
-    # The function should check if search_agent is None at the beginning
-    # We know this will return the appropriate message based on our implementation
+    print("✅ Simplified framework correctly has no search functionality")
+    print(f"Available tools: {tool_names}")
+
+@pytest.mark.asyncio
+@pytest.mark.simplified_framework
+async def test_simplified_framework_always_bqml():
+    """Test that BQML is always enabled in our simplified framework."""
+    # BQML should always be present as a sub-agent
+    assert len(root_agent.sub_agents) > 0, "Should have sub-agents"
     
-    print("✅ Google Search integration behaves correctly when disabled")
-    print(f"search_agent state: {search_agent}")
-    print("Note: call_search_agent will return appropriate disabled message when called with ToolContext")
+    sub_agent_names = [agent.name for agent in root_agent.sub_agents]
+    has_bqml = any("bqml" in name.lower() or "bq_ml" in name.lower() for name in sub_agent_names)
+    assert has_bqml, f"BQML should always be enabled. Sub-agents: {sub_agent_names}"
+    
+    print("✅ BQML is always enabled in simplified framework")
+    print(f"Sub-agents: {sub_agent_names}")

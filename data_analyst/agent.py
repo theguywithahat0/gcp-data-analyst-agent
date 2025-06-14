@@ -28,51 +28,33 @@ from google.adk.tools import load_artifacts
 from google.adk.tools.retrieval.vertex_ai_rag_retrieval import VertexAiRagRetrieval
 from vertexai.preview import rag
 
-from .sub_agents import bqml_agent, search_agent
+from .sub_agents import bqml_agent
 from .sub_agents.bigquery.tools import (
     get_database_settings as get_bq_database_settings,
 )
 from .prompts import return_instructions_root
-from .tools import call_db_agent, call_ds_agent, call_search_agent
+from .tools import call_db_agent, call_ds_agent
 
 date_today = date.today()
 
-# Create optional tools and sub-agents based on configuration
-
-def create_document_retrieval_tool():
-    """Create document retrieval tool only if BUSINESS_RAG_CORPUS is configured."""
-    business_rag_corpus = os.getenv("BUSINESS_RAG_CORPUS")
-    if business_rag_corpus:
-        return VertexAiRagRetrieval(
-            name='retrieve_documentation',
-            description=(
-                'Use this tool to retrieve relevant business documentation, KPIs, formulas, '
-                'domain-specific knowledge, and schema information when answering questions '
-                'that require business context or data interpretation guidance. '
-                'This is separate from technical BQML documentation.'
-            ),
-            rag_resources=[
-                rag.RagResource(rag_corpus=business_rag_corpus)
-            ],
-            similarity_top_k=5,
-            vector_distance_threshold=0.6,
-        )
-    return None
-
-def should_enable_bqml():
-    """Check if BQML agent should be enabled."""
-    # Enable BQML by default, but allow disabling via environment variable
-    return os.getenv("ENABLE_BQML", "true").lower() in ("true", "1", "yes", "on")
-
-def should_enable_google_search():
-    """Check if Google Search should be enabled."""
-    return search_agent is not None
-
-
-# Create optional components
-document_retrieval = create_document_retrieval_tool()
-enable_bqml = should_enable_bqml()
-enable_google_search = should_enable_google_search()
+# Create document retrieval tool
+business_rag_corpus = os.getenv("BUSINESS_RAG_CORPUS")
+document_retrieval = None
+if business_rag_corpus:
+    document_retrieval = VertexAiRagRetrieval(
+        name='retrieve_documentation',
+        description=(
+            'Use this tool to retrieve relevant business documentation, KPIs, formulas, '
+            'domain-specific knowledge, and schema information when answering questions '
+            'that require business context or data interpretation guidance. '
+            'This is separate from technical BQML documentation.'
+        ),
+        rag_resources=[
+            rag.RagResource(rag_corpus=business_rag_corpus)
+        ],
+        similarity_top_k=5,
+        vector_distance_threshold=0.6,
+    )
 
 
 def setup_before_agent_call(callback_context: CallbackContext):
@@ -100,6 +82,17 @@ def setup_before_agent_call(callback_context: CallbackContext):
         )
 
 
+# Build tools list
+tools = [
+    call_db_agent,
+    call_ds_agent,
+    load_artifacts,
+]
+
+# Add document retrieval if available
+if document_retrieval:
+    tools.append(document_retrieval)
+
 root_agent = Agent(
     model=os.getenv("ROOT_AGENT_MODEL"),
     name="db_ds_multiagent",
@@ -110,12 +103,8 @@ root_agent = Agent(
         Todays date: {date_today}
         """
     ),
-    sub_agents=[bqml_agent] if enable_bqml else [],
-    tools=[
-        call_db_agent,
-        call_ds_agent,
-        load_artifacts,
-    ] + ([call_search_agent] if enable_google_search else []) + ([document_retrieval] if document_retrieval else []),
+    sub_agents=[bqml_agent],
+    tools=tools,
     before_agent_callback=setup_before_agent_call,
     generate_content_config=types.GenerateContentConfig(temperature=0.01),
 )

@@ -142,7 +142,7 @@ def check_or_create_business_rag_corpus():
 
 def main():
     """Main deployment function."""
-    logger.info("🚀 Starting GCP Data Analyst Agent Deployment")
+    logger.info("🚀 Starting GCP Data Analyst Agent Deployment (Simplified Framework)")
     logger.info(f"📍 Project: {PROJECT_ID}")
     logger.info(f"📍 Location: {LOCATION}")
     
@@ -158,7 +158,8 @@ def main():
     bqml_corpus = check_or_create_bqml_rag_corpus()
     business_corpus = check_or_create_business_rag_corpus()
     
-    # Pass required environment variables for the agent
+    # Pass required environment variables for the simplified agent
+    # Note: Our simplified framework has fewer environment variables
     env_vars = {
         "ROOT_AGENT_MODEL": os.getenv("ROOT_AGENT_MODEL"),
         "ANALYTICS_AGENT_MODEL": os.getenv("ANALYTICS_AGENT_MODEL"),
@@ -172,21 +173,26 @@ def main():
         "BUSINESS_RAG_CORPUS": business_corpus,
         "CODE_INTERPRETER_EXTENSION_NAME": os.getenv("CODE_INTERPRETER_EXTENSION_NAME"),
         "NL2SQL_METHOD": os.getenv("NL2SQL_METHOD"),
-        "ENABLE_BQML": os.getenv("ENABLE_BQML", "true"),
-        "GOOGLE_SEARCH_API_KEY": os.getenv("GOOGLE_SEARCH_API_KEY"),
-        "GOOGLE_SEARCH_ENGINE_ID": os.getenv("GOOGLE_SEARCH_ENGINE_ID"),
+        # Note: ENABLE_BQML and search-related variables removed in simplified framework
     }
     
     # Remove None values
     env_vars = {k: v for k, v in env_vars.items() if v is not None}
     
-    logger.info("🏗️  Creating agent...")
+    logger.info("🏗️  Creating simplified agent...")
+    logger.info("📋 Framework features:")
+    logger.info("  • ✅ BQML (always enabled)")
+    logger.info("  • ✅ Database queries")
+    logger.info("  • ✅ Data science analysis")
+    logger.info("  • ❌ Google Search (removed)")
+    logger.info("  • ✅ Document retrieval (optional)")
+    
     app = AdkApp(agent=agent)
     
     try:
         remote_app = agent_engines.create(
             app,
-            display_name="gcp-data-analyst-agent",
+            display_name="gcp-data-analyst-agent-simplified",
             requirements=[AGENT_WHL_FILE],
             extra_packages=[AGENT_WHL_FILE],
             env_vars=env_vars,
@@ -196,13 +202,19 @@ def main():
         logger.info(f"📋 Resource name: {remote_app.resource_name}")
         logger.info(f"🌐 Agent Engine URL: https://console.cloud.google.com/vertex-ai/agents/locations/{LOCATION}/agent-engines/{remote_app.resource_name.split('/')[-1]}")
         
-        print("\n" + "="*60)
-        print("🎉 GCP Data Analyst Agent Deployed Successfully!")
+        print("\n" + "="*70)
+        print("🎉 GCP Data Analyst Agent (Simplified) Deployed Successfully!")
         print(f"📋 Resource: {remote_app.resource_name}")
         print("🧠 RAG Corpora Status:")
         print(f"  • BQML RAG: {'✅ Enabled' if bqml_corpus else '❌ Disabled'}")
         print(f"  • Business RAG: {'✅ Enabled' if business_corpus else '❌ Disabled'}")
-        print("="*60)
+        print("🚀 Framework Features:")
+        print("  • ✅ BQML (always enabled)")
+        print("  • ✅ Database queries")
+        print("  • ✅ Data science analysis")
+        print("  • ❌ Google Search (removed for stability)")
+        print("  • ✅ Document retrieval (optional)")
+        print("="*70)
         
         return remote_app
         
