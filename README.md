@@ -8,6 +8,7 @@ An enhanced multi-agent system for data science and analytics workflows, built o
 ✅ **RAG Corpora Configured** - Both BQML and Business RAG corpora operational  
 ✅ **Permission Issues Resolved** - All authentication and access issues fixed  
 ✅ **Enhanced Deployment** - Automated RAG setup and comprehensive error handling  
+✅ **Verification Script** - Automated testing of all agent capabilities
 
 ## 🏗️ Architecture
 
@@ -17,7 +18,6 @@ This is a **multi-agent system** with specialized capabilities:
 - **🔍 BigQuery Sub-Agent**: Natural language to SQL conversion and query execution  
 - **📊 Analytics Sub-Agent**: Python code generation and execution for data analysis
 - **🤖 BQML Sub-Agent**: Machine learning model training and inference with BigQuery ML
-- **🔍 Search Sub-Agent**: Real-time web search using Google Custom Search API
 - **📚 RAG Integration**: Intelligent document retrieval for business context and BQML documentation
 
 ## ✨ Key Features
@@ -44,6 +44,7 @@ This is a **multi-agent system** with specialized capabilities:
 - Environment-aware deployment with validation
 - Comprehensive error handling and logging
 - Production-ready configuration with fallbacks
+- Automated verification and testing
 
 ## 🚀 Quick Start
 
@@ -84,16 +85,13 @@ This is a **multi-agent system** with specialized capabilities:
    GOOGLE_CLOUD_PROJECT=your-project-id
    BQ_PROJECT_ID=your-project-id
    BQ_DATASET_ID=your-dataset-id
+   AGENT_RESOURCE_NAME=your-deployed-agent-resource-name
 
    # Models (using Gemini 2.0 Flash by default)
    ROOT_AGENT_MODEL=gemini-2.0-flash-001
    BIGQUERY_AGENT_MODEL=gemini-2.0-flash-001
    ANALYTICS_AGENT_MODEL=gemini-2.0-flash-001
    BQML_AGENT_MODEL=gemini-2.0-flash-001
-
-   # Optional: Google Search (for web search capabilities)
-   GOOGLE_SEARCH_API_KEY=your-search-api-key
-   GOOGLE_SEARCH_ENGINE_ID=your-search-engine-id
 
    # RAG Corpora (auto-created during deployment)
    BUSINESS_RAG_CORPUS=auto-generated
@@ -120,6 +118,18 @@ This is a **multi-agent system** with specialized capabilities:
    - ✅ **Agent Deployment**: Deploy with all configurations and dependencies
    - ✅ **Verification**: Provide endpoints and console URLs for testing
    - ✅ **Error Recovery**: Graceful handling of permission and configuration issues
+
+3. **Verify Deployment**:
+   ```bash
+   poetry run python verify_deployment.py
+   ```
+
+   The verification script will:
+   - ✅ **Test Connection**: Verify agent connectivity
+   - ✅ **Query Testing**: Run sample queries to test functionality
+   - ✅ **Sub-Agent Testing**: Verify all sub-agents are working
+   - ✅ **RAG Testing**: Validate document retrieval capabilities
+   - ✅ **Error Handling**: Check error handling and recovery
 
 ## 🧠 RAG Corpus Management
 
@@ -184,11 +194,11 @@ gcp-data-analyst-agent/
 │   └── sub_agents/              # Specialized sub-agents
 │       ├── bigquery/            # SQL generation and execution
 │       ├── analytics/           # Python data analysis
-│   ├── bqml/               # BigQuery ML workflows
-│   └── search/             # Web search capabilities
+│       └── bqml/                # BigQuery ML workflows
 ├── tests/                       # Comprehensive test suite
 ├── deploy.py                    # Enhanced deployment script
-├── .env                        # Environment configuration
+├── verify_deployment.py         # Deployment verification script
+├── .env                         # Environment configuration
 ├── pyproject.toml              # Python project configuration
 ├── poetry.lock                 # Dependency lock file
 └── README.md                   # This documentation
@@ -203,11 +213,11 @@ gcp-data-analyst-agent/
 | `GOOGLE_CLOUD_PROJECT` | GCP Project ID | - | ✅ |
 | `BQ_PROJECT_ID` | BigQuery Project ID | - | ✅ |
 | `BQ_DATASET_ID` | BigQuery Dataset ID | - | ✅ |
+| `AGENT_RESOURCE_NAME` | Deployed agent resource name | - | ✅ |
 | `ROOT_AGENT_MODEL` | Root agent model | `gemini-2.0-flash-001` | ✅ |
 | `BUSINESS_RAG_CORPUS` | Business RAG corpus name | Auto-generated | ❌ |
 | `BQML_RAG_CORPUS_NAME` | BQML RAG corpus name | Auto-generated | ❌ |
 | `ENABLE_BQML` | Enable BQML functionality | `true` | ❌ |
-| `GOOGLE_SEARCH_API_KEY` | Google Search API key | - | ❌ |
 | `NL2SQL_METHOD` | SQL generation method | `BASELINE` | ❌ |
 
 ### Enhanced Deployment Features
@@ -222,6 +232,33 @@ The deployment script provides enterprise-grade features:
 6. **🛡️ Error Recovery**: Graceful handling of common deployment issues
 7. **✅ Post-deployment Verification**: Endpoint validation and testing guidance
 
+### Verification Script
+
+The `verify_deployment.py` script provides comprehensive testing:
+
+1. **🔍 Connection Testing**:
+   - Verifies agent connectivity
+   - Tests session creation and management
+   - Validates response formatting
+
+2. **🚀 Functionality Testing**:
+   - Tests basic data queries
+   - Verifies sub-agent routing
+   - Checks RAG integration
+   - Validates BQML capabilities
+
+3. **📊 Response Validation**:
+   - Formats responses for readability
+   - Validates response structure
+   - Checks error handling
+   - Monitors performance
+
+4. **🔧 Debugging Features**:
+   - Detailed logging
+   - Response formatting
+   - Error tracing
+   - Performance monitoring
+
 ### Monitoring and Observability
 
 - **Deployment Logs**: Comprehensive logging with structured output
@@ -234,216 +271,42 @@ The deployment script provides enterprise-grade features:
 
 After successful deployment, test your agent through multiple channels:
 
-### 1. GCP Console (Recommended)
+### 1. Automated Verification
+```bash
+poetry run python verify_deployment.py
+```
+This will run a comprehensive suite of tests to verify all agent capabilities.
+
+### 2. GCP Console (Recommended)
 - Visit the provided Agent Engine URL in GCP Console
 - Use the Sessions tab for interactive testing
 - Monitor performance and logs in real-time
 
-### 2. API Integration
+### 3. API Integration
 Use the following endpoints for direct agent access:
-- **Query Endpoint**: `https://us-central1-aiplatform.googleapis.com/v1/projects/jh-testing-project/locations/us-central1/reasoningEngines/7972611589561909248:query`
-- **Stream Endpoint**: `https://us-central1-aiplatform.googleapis.com/v1/projects/jh-testing-project/locations/us-central1/reasoningEngines/7972611589561909248:streamQuery?alt=sse`
+- **Query Endpoint**: `https://us-central1-aiplatform.googleapis.com/v1/[AGENT_RESOURCE_NAME]:query`
+- **Stream Endpoint**: `https://us-central1-aiplatform.googleapis.com/v1/[AGENT_RESOURCE_NAME]:streamQuery?alt=sse`
 
 Important usage notes:
 1. **Session Management**:
    - Each conversation requires a unique session
    - Sessions are created automatically on first query
-   - Maintain the same session ID for continued conversations
+   - Session state is maintained for context awareness
 
-2. **Authentication**:
-   - Use Google Cloud authentication
-   - Ensure proper IAM permissions are set
-   - Use `gcloud auth application-default login` for local testing
+2. **Response Handling**:
+   - Responses include structured data and natural language
+   - SQL results are formatted for readability
+   - Error messages include resolution guidance
+   - Performance metrics are included in response metadata
 
-3. **Making Requests**:
-   ```python
-   import requests
-   import google.auth.transport.requests
-   import google.oauth2.credentials
-
-   # Get credentials
-   credentials, project = google.auth.default()
-   auth_req = google.auth.transport.requests.Request()
-   credentials.refresh(auth_req)
-
-   # Headers for authentication
-   headers = {
-       'Authorization': f'Bearer {credentials.token}',
-       'Content-Type': 'application/json',
-   }
-
-   # Example query request
-   query_data = {
-       "prompt": "Your question here",
-       "temperature": 0.2
-   }
-
-   # For regular queries
-   response = requests.post(QUERY_ENDPOINT, headers=headers, json=query_data)
-
-   # For streaming responses
-   with requests.get(STREAM_ENDPOINT, headers=headers, stream=True) as response:
-       for line in response.iter_lines():
-           if line:
-               # Process SSE response
-               print(line.decode('utf-8'))
-   ```
-
-4. **Best Practices**:
-   - Keep temperature low (0.2) for analytical queries
-   - Use streaming endpoint for real-time responses
-   - Handle rate limits and timeouts appropriately
-   - Implement proper error handling
-
-5. **Debugging Tips**:
-   - Check response status codes
-   - Verify authentication token is valid
-   - Monitor query execution time
-   - Use proper session management
-
-### 3. SDK Integration
-```python
-import vertexai
-from vertexai import agent_engines
-
-# Initialize
-vertexai.init(project="your-project", location="us-central1")
-
-# Get agent
-agent = agent_engines.get("your-agent-resource-name")
-
-# Query with session
-for event in agent.stream_query(
-    user_id="user123",
-    session_id="session456", 
-    message="What tables are available?"
-):
-    print(event)
-```
-
-### Example Queries to Try
-
-**Data Exploration:**
-- "Show me the schema of available tables"
-- "What are the top 10 customers by revenue?"
-- "Analyze sales trends over the last 12 months"
-
-**Machine Learning:**
-- "Train a clustering model on customer data"
-- "Create a time series forecast for sales"
-- "How do I optimize a BigQuery ML model for better performance?"
-
-**Business Intelligence:**
-- "What's our customer acquisition cost trend?"
-- "Generate a cohort analysis for user retention"
-- "Create a dashboard showing key business metrics"
+3. **Best Practices**:
+   - Start with simple queries to verify functionality
+   - Test each sub-agent's capabilities separately
+   - Validate RAG integration with specific queries
+   - Monitor response times and performance
+   - Use the verification script for regression testing
 
 ## 🛠️ Development
 
 ### Local Development
-```bash
-# Install dependencies
-poetry install
-
-# Run tests
-poetry run pytest
-
-# Build package
-poetry build --format=wheel --output=dist
-
-# Local testing with ADK Runner
-poetry run adk-runner --agent data_analyst.agent:root_agent
 ```
-
-### Testing
-```bash
-# Run all tests
-poetry run pytest
-
-# Run with coverage
-poetry run pytest --cov=data_analyst
-
-# Run specific test categories
-poetry run pytest tests/test_agents.py -v
-```
-
-## 🔧 Troubleshooting
-
-### Common Issues and Solutions
-
-#### 1. Permission Denied Errors
-**Symptom**: `403 PERMISSION_DENIED` errors during deployment or agent queries
-**Solution**: 
-- Verify GCP authentication: `gcloud auth application-default login`
-- Check IAM permissions for Vertex AI, BigQuery, and Cloud Storage
-- Ensure project ID is correct in `.env`
-
-#### 2. RAG Corpus Access Issues
-**Symptom**: Agent responds but mentions limited source information
-**Solution**:
-- Check RAG corpus IDs in `.env` file
-- Verify corpus exists in correct project/location
-- Re-run deployment to recreate RAG corpora: `poetry run python deploy.py`
-
-#### 3. Agent Not Responding
-**Symptom**: Agent processes queries but returns no conversational response
-**Solution**:
-- This was a known issue with incorrect RAG corpus configuration (now resolved)
-- Ensure latest deployment with fixed RAG setup
-- Check agent logs in GCP Console for detailed error messages
-
-#### 4. Deployment Failures
-**Symptom**: Deployment script fails with various errors
-**Solution**:
-- Check all required APIs are enabled in GCP
-- Verify sufficient quotas for Vertex AI and BigQuery
-- Review deployment logs for specific error messages
-- Ensure staging bucket exists and is accessible
-
-### Getting Help
-
-1. **Check Logs**: Review GCP Console logs for detailed error information
-2. **Validate Environment**: Ensure all required environment variables are set
-3. **Test Permissions**: Verify IAM roles and API access
-4. **Review Documentation**: Check Google's ADK and Vertex AI documentation
-
-## 📚 Documentation & Resources
-
-- [Google Agent Development Kit](https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/overview)
-- [BigQuery ML Documentation](https://cloud.google.com/bigquery/docs/bqml-introduction)
-- [Vertex AI RAG Documentation](https://cloud.google.com/vertex-ai/generative-ai/docs/rag-overview)
-- [Gemini 2.0 Flash Model](https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/gemini)
-
-## 🤝 Contributing
-
-We welcome contributions! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes with tests
-4. Commit your changes (`git commit -m 'Add amazing feature'`)
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request
-
-### Development Guidelines
-- Add tests for new functionality
-- Update documentation for API changes
-- Follow existing code style and patterns
-- Ensure all tests pass before submitting
-
-## 📄 License
-
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Built with Google's Agent Development Kit (ADK)
-- Enhanced with production-ready features and comprehensive error handling
-- Includes curated BigQuery ML documentation from Google Cloud samples
-- Inspired by modern data science and MLOps best practices
-
----
-
-**🚀 Ready for Production** | Built with ❤️ using Google's Agent Development Kit
-
-*Last Updated: January 2025 - Fully tested and production-ready*
