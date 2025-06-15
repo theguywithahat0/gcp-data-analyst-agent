@@ -200,7 +200,7 @@ def main():
     try:
         remote_app = agent_engines.create(
             app,
-            display_name="gcp-data-analyst-agent-simplified",
+            display_name="gcp-data-analyst-agent",
             requirements=[AGENT_WHL_FILE],
             extra_packages=[AGENT_WHL_FILE],
             env_vars=env_vars,
@@ -211,17 +211,14 @@ def main():
         logger.info(f"🌐 Agent Engine URL: https://console.cloud.google.com/vertex-ai/agents/locations/{LOCATION}/agent-engines/{remote_app.resource_name.split('/')[-1]}")
         
         print("\n" + "="*70)
-        print("🎉 GCP Data Analyst Agent (Simplified) Deployed Successfully!")
+        print("🎉 GCP Data Analyst Agent Deployed Successfully!")
         print(f"📋 Resource: {remote_app.resource_name}")
         print("🧠 RAG Corpora Status:")
-        print(f"  • BQML RAG: {'✅ Enabled' if bqml_corpus else '❌ Disabled'}")
-        print(f"  • Business RAG: {'✅ Enabled' if business_corpus else '❌ Disabled'}")
         print("🚀 Framework Features:")
         print("  • ✅ BQML (always enabled)")
         print("  • ✅ Database queries")
         print("  • ✅ Data science analysis")
-        print("  • ❌ Google Search (removed for stability)")
-        print("  • ✅ Document retrieval (optional)")
+        print("  • ✅ Document retrieval")
         print("="*70)
         
         return remote_app

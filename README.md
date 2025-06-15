@@ -240,9 +240,66 @@ After successful deployment, test your agent through multiple channels:
 - Monitor performance and logs in real-time
 
 ### 2. API Integration
-Use the provided endpoints:
-- **REST**: `https://us-central1-aiplatform.googleapis.com/v1/projects/YOUR_PROJECT/locations/us-central1/reasoningEngines/RESOURCE_ID:query`
-- **Streaming**: `https://us-central1-aiplatform.googleapis.com/v1/projects/YOUR_PROJECT/locations/us-central1/reasoningEngines/RESOURCE_ID:streamQuery?alt=sse`
+Use the following endpoints for direct agent access:
+- **Query Endpoint**: `https://us-central1-aiplatform.googleapis.com/v1/projects/jh-testing-project/locations/us-central1/reasoningEngines/7972611589561909248:query`
+- **Stream Endpoint**: `https://us-central1-aiplatform.googleapis.com/v1/projects/jh-testing-project/locations/us-central1/reasoningEngines/7972611589561909248:streamQuery?alt=sse`
+
+Important usage notes:
+1. **Session Management**:
+   - Each conversation requires a unique session
+   - Sessions are created automatically on first query
+   - Maintain the same session ID for continued conversations
+
+2. **Authentication**:
+   - Use Google Cloud authentication
+   - Ensure proper IAM permissions are set
+   - Use `gcloud auth application-default login` for local testing
+
+3. **Making Requests**:
+   ```python
+   import requests
+   import google.auth.transport.requests
+   import google.oauth2.credentials
+
+   # Get credentials
+   credentials, project = google.auth.default()
+   auth_req = google.auth.transport.requests.Request()
+   credentials.refresh(auth_req)
+
+   # Headers for authentication
+   headers = {
+       'Authorization': f'Bearer {credentials.token}',
+       'Content-Type': 'application/json',
+   }
+
+   # Example query request
+   query_data = {
+       "prompt": "Your question here",
+       "temperature": 0.2
+   }
+
+   # For regular queries
+   response = requests.post(QUERY_ENDPOINT, headers=headers, json=query_data)
+
+   # For streaming responses
+   with requests.get(STREAM_ENDPOINT, headers=headers, stream=True) as response:
+       for line in response.iter_lines():
+           if line:
+               # Process SSE response
+               print(line.decode('utf-8'))
+   ```
+
+4. **Best Practices**:
+   - Keep temperature low (0.2) for analytical queries
+   - Use streaming endpoint for real-time responses
+   - Handle rate limits and timeouts appropriately
+   - Implement proper error handling
+
+5. **Debugging Tips**:
+   - Check response status codes
+   - Verify authentication token is valid
+   - Monitor query execution time
+   - Use proper session management
 
 ### 3. SDK Integration
 ```python
