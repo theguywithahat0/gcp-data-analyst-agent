@@ -58,11 +58,7 @@ def get_database_settings():
 def update_database_settings():
     """Update database settings."""
     global database_settings
-    ddl_schema = get_bigquery_schema(
-        get_env_var("BQ_DATASET_ID"),
-        client=get_bq_client(),
-        project_id=get_env_var("BQ_PROJECT_ID"),
-    )
+    ddl_schema = get_bigquery_schema()
     database_settings = {
         "bq_project_id": get_env_var("BQ_PROJECT_ID"),
         "bq_dataset_id": get_env_var("BQ_DATASET_ID"),
@@ -73,24 +69,17 @@ def update_database_settings():
     return database_settings
 
 
-def get_bigquery_schema(dataset_id, client=None, project_id=None):
-    """Retrieves schema and generates DDL with example values for a BigQuery dataset.
-
-    Args:
-        dataset_id (str): The ID of the BigQuery dataset (e.g., 'my_dataset').
-        client (bigquery.Client): A BigQuery client.
-        project_id (str): The ID of your Google Cloud Project.
+def get_bigquery_schema() -> str:
+    """Retrieves schema and generates DDL with example values for the configured BigQuery dataset.
 
     Returns:
         str: A string containing the generated DDL statements.
     """
-
-    if client is None:
-        client = bigquery.Client(project=project_id)
-
-    # dataset_ref = client.dataset(dataset_id)
+    client = get_bq_client()
+    project_id = get_env_var("BQ_PROJECT_ID")
+    dataset_id = get_env_var("BQ_DATASET_ID")
+    
     dataset_ref = bigquery.DatasetReference(project_id, dataset_id)
-
     ddl_statements = ""
 
     for table in client.list_tables(dataset_ref):
@@ -183,7 +172,7 @@ The database structure is defined by the following table schemas (possibly with 
 
    """
 
-    ddl_schema = tool_context.state["database_settings"]["bq_ddl_schema"]
+    ddl_schema = get_bigquery_schema()
 
     prompt = prompt_template.format(
         MAX_NUM_ROWS=MAX_NUM_ROWS, SCHEMA=ddl_schema, QUESTION=question
@@ -273,7 +262,7 @@ def run_bigquery_validation(
         final_result["error_message"] = (
             "Invalid SQL: Contains disallowed DML/DDL operations."
         )
-        return final_result
+        return "Invalid SQL: Contains disallowed DML/DDL operations."
 
     try:
         query_job = get_bq_client().query(sql_string)
@@ -306,7 +295,9 @@ def run_bigquery_validation(
     except (
         Exception
     ) as e:  # Catch generic exceptions from BigQuery  # pylint: disable=broad-exception-caught
-        final_result["error_message"] = f"Invalid SQL: {e}"
+        error_message = f"Invalid SQL: {e}"
+        final_result["error_message"] = error_message
+        return error_message
 
     print("\n run_bigquery_validation final_result: \n", final_result)
 

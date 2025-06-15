@@ -158,6 +158,14 @@ def main():
     bqml_corpus = check_or_create_bqml_rag_corpus()
     business_corpus = check_or_create_business_rag_corpus()
     
+    # Check for Code Interpreter
+    code_interpreter_name = os.getenv("CODE_INTERPRETER_EXTENSION_NAME")
+    if not code_interpreter_name:
+        logger.warning("⚠️  CODE_INTERPRETER_EXTENSION_NAME is not set in your .env file.")
+        logger.warning("The data science agent (nl2py) will not work without it.")
+        logger.warning("Please create a separate Reasoning Engine for the code interpreter,")
+        logger.warning("and add its resource name to the .env file.")
+
     # Pass required environment variables for the simplified agent
     # Note: Our simplified framework has fewer environment variables
     env_vars = {
@@ -171,7 +179,7 @@ def main():
         "BQ_PROJECT_ID": os.getenv("BQ_PROJECT_ID"),
         "BQML_RAG_CORPUS_NAME": bqml_corpus,
         "BUSINESS_RAG_CORPUS": business_corpus,
-        "CODE_INTERPRETER_EXTENSION_NAME": os.getenv("CODE_INTERPRETER_EXTENSION_NAME"),
+        "CODE_INTERPRETER_EXTENSION_NAME": code_interpreter_name,
         "NL2SQL_METHOD": os.getenv("NL2SQL_METHOD"),
         # Note: ENABLE_BQML and search-related variables removed in simplified framework
     }

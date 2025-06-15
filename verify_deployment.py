@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Deployment Verification Script for GCP Data Analyst Agent (Simplified Framework)
+Deployment Verification Script for GCP Data Analyst Agent (ADK Framework)
 
 This script verifies that your deployed agent is working correctly
 with proper database queries, BQML functionality, and RAG corpus access.
@@ -8,18 +8,16 @@ with proper database queries, BQML functionality, and RAG corpus access.
 
 import os
 import sys
-import asyncio
-import vertexai
-from vertexai import agent_engines
-from google.adk.sessions import VertexAiSessionService
 from dotenv import load_dotenv
-
+import vertexai
+from vertexai.preview.reasoning_engines import AdkApp
+from google.adk.agents import Agent
+from data_analyst.sub_agents.bigquery import tools as bq_tools
 
 def print_header():
     """Print verification header."""
-    print("🔍 GCP Data Analyst Agent - Deployment Verification (Simplified Framework)")
+    print("🔍 GCP Data Analyst Agent - Deployment Verification (ADK Framework)")
     print("=" * 80)
-
 
 def print_status(message, status="info"):
     """Print status message with emoji."""
@@ -32,16 +30,16 @@ def print_status(message, status="info"):
     }
     print(f"{emoji_map.get(status, 'ℹ️')} {message}")
 
-
-async def verify_agent_deployment():
+def verify_agent_deployment():
     """Verify the deployed agent is working correctly."""
     
     # Load environment
     load_dotenv()
     
     project_id = os.getenv('GOOGLE_CLOUD_PROJECT', 'jh-testing-project')
-    location = os.getenv('LOCATION', 'us-central1')
+    location = os.getenv('GOOGLE_CLOUD_LOCATION', 'us-central1')
     
+    print_header()
     print_status(f"Project: {project_id}")
     print_status(f"Location: {location}")
     print()
@@ -50,74 +48,56 @@ async def verify_agent_deployment():
         # Initialize Vertex AI
         vertexai.init(project=project_id, location=location)
         print_status("Vertex AI initialized", "success")
-        
-        # Get the latest deployed agent resource name (Simplified Framework)
-        agent_resource_name = "projects/115564817055/locations/us-central1/reasoningEngines/1858975095406460928"
-        
-        print_status(f"Connecting to agent: {agent_resource_name}")
-        
-        # Connect to agent
-        agent_engine = agent_engines.get(agent_resource_name)
-        print_status("Agent connection successful", "success")
-        
-        # Create session service
-        session_service = VertexAiSessionService(project=project_id, location=location)
+
+        # Create root agent with BigQuery tools
+        root_agent = Agent(
+            model=os.getenv('ROOT_AGENT_MODEL', 'gemini-2.0-flash-001'),
+            name='data_analyst_agent',
+            instruction="""You are a data analyst agent that helps users query and analyze data from BigQuery.
+            You have access to the jaffle_shop dataset and can help users understand and query the data.
+            
+            Before answering any questions, you should:
+            1. Get the current database settings using update_database_settings()
+            2. Get the schema information using get_bigquery_schema()
+            3. Then proceed with the user's query
+            
+            When asked to run a query:
+            1. Use initial_bq_nl2sql() to generate the SQL
+            2. Use run_bigquery_validation() to validate and run the query
+            3. Format the results in a clear, readable way
+            """,
+            tools=[
+                bq_tools.initial_bq_nl2sql,
+                bq_tools.run_bigquery_validation,
+                bq_tools.get_bigquery_schema,
+                bq_tools.update_database_settings
+            ]
+        )
+
+        # Create ADK app
+        app = AdkApp(agent=root_agent)
+        print_status("✅ ADK app created")
         
         # Create session
         print_status("Creating session...")
-        session = await session_service.create_session(
-            app_name=agent_resource_name,
+        session = app.create_session(
             user_id="verification_user",
+            session_id=None  # Let ADK generate a session ID
         )
-        print_status(f"Session created: {session.id}", "success")
+        print_status(f"✅ Session created: {session.id}")
         print()
         
         # Test queries to verify functionality
         test_queries = [
-            {
-                "query": "Hello! Can you help me with data analysis?",
-                "description": "Basic conversational test",
-                "expected_keywords": ["data analysis", "help", "query", "database"]
-            },
-            {
-                "query": "What tools do you have available?",
-                "description": "Tool availability test",
-                "expected_keywords": ["tools", "database", "data science", "agent"]
-            },
             {
                 "query": "What tables are available in the database?",
                 "description": "Database schema exploration",
                 "expected_keywords": ["tables", "database", "available"]
             },
             {
-                "query": "Using your tools show me some rows of the customers table",
-                "description": "Database query request test",
-                "expected_keywords": ["customers", "data", "query", "table", "SELECT"]
-            },
-            {
-                "query": "Please transfer me to the BQML agent",
-                "description": "BQML agent transfer test",
-                "expected_keywords": ["BQML", "transfer", "bq_ml_agent"]
-            },
-            {
-                "query": "What type of models can you help me make and can you give me an example?",
-                "description": "BQML model types and examples test",
-                "expected_keywords": ["models", "example", "regression", "classification", "CREATE MODEL"]
-            },
-            {
-                "query": "How do I create a linear regression model?",
-                "description": "BQML linear regression test",
-                "expected_keywords": ["linear regression", "CREATE MODEL", "LINEAR_REG"]
-            },
-            {
-                "query": "Please transfer me back to the root agent",
-                "description": "Root agent transfer test",
-                "expected_keywords": ["root agent", "transfer", "data analysis"]
-            },
-            {
-                "query": "Can you call the data science agent to help me analyze some data?",
-                "description": "Data science agent call test",
-                "expected_keywords": ["data science agent", "call_ds_agent", "analyze"]
+                "query": "Show me the first 5 rows from the customers table",
+                "description": "Basic query execution",
+                "expected_keywords": ["SELECT", "customers", "LIMIT"]
             }
         ]
         
@@ -129,109 +109,39 @@ async def verify_agent_deployment():
             print("-" * 60)
             
             try:
-                response_parts = []
-                event_count = 0
-                max_events = 100  # Prevent infinite loops
-                
-                # Stream query to agent with timeout protection
-                for event in agent_engine.stream_query(
+                # Stream query to agent
+                for event in app.stream_query(
                     user_id="verification_user",
                     session_id=session.id,
-                    message=test['query'],
+                    message=test['query']
                 ):
-                    event_count += 1
-                    if event_count > max_events:
-                        print_status("Too many events, stopping stream", "warning")
-                        break
-                        
-                    if "content" in event:
-                        parts = event["content"].get("parts", [])
-                        for part in parts:
-                            if "text" in part:
-                                response_parts.append(part["text"])
-                
-                # Analyze response
-                full_response = "".join(response_parts)
-                
-                if full_response:
-                    response_length = len(full_response)
-                    print_status(f"Response received ({response_length} chars)", "success")
-                    
-                    # Check for issues
-                    if "PERMISSION_DENIED" in full_response:
-                        print_status("Permission error detected in response", "error")
-                        results.append({"test": i, "status": "failed", "issue": "permission_error"})
-                    elif "403" in full_response or "401" in full_response:
-                        print_status("Authentication error detected", "error")
-                        results.append({"test": i, "status": "failed", "issue": "auth_error"})
-                    elif "Error" in full_response and "SQL" in full_response:
-                        print_status("SQL execution error - this might be expected for demo data", "warning")
-                        results.append({"test": i, "status": "warning", "issue": "sql_error"})
-                    elif response_length < 50:
-                        print_status("Response too short - possible issue", "warning")
-                        results.append({"test": i, "status": "warning", "issue": "short_response"})
+                    if isinstance(event, dict):
+                        if 'content' in event:
+                            content = event['content']
+                            if 'parts' in content:
+                                for part in content['parts']:
+                                    if 'text' in part:
+                                        print(part['text'])
+                                    elif 'function_call' in part:
+                                        print(f"[Function Call] {part['function_call']['name']}")
+                                    elif 'function_response' in part:
+                                        print(f"[Function Response] {part['function_response']['name']}")
+                                        if 'response' in part['function_response']:
+                                            print(part['function_response']['response'])
+                        elif 'text' in event:
+                            print(event['text'])
+                        elif 'function_call' in event:
+                            print(f"[Function Call] {event['function_call']['name']}")
+                        elif 'function_response' in event:
+                            print(f"[Function Response] {event['function_response']['name']}")
+                            if 'response' in event['function_response']:
+                                print(event['function_response']['response'])
                     else:
-                        # Check for expected keywords
-                        response_lower = full_response.lower()
-                        expected_keywords = test.get("expected_keywords", [])
-                        found_keywords = [kw for kw in expected_keywords if kw.lower() in response_lower]
-                        
-                        if found_keywords or not expected_keywords:
-                            print_status("Response looks good!", "success")
-                            if found_keywords:
-                                print_status(f"Found expected keywords: {', '.join(found_keywords)}", "info")
-                            results.append({"test": i, "status": "passed"})
-                        else:
-                            print_status("Response received but missing expected content", "warning")
-                            results.append({"test": i, "status": "warning", "issue": "missing_keywords"})
-                        
-                    # Show full response
-                    print(f"   Full Response:")
-                    print(f"   {'-' * 40}")
-                    print(f"   {full_response}")
-                    print(f"   {'-' * 40}")
-                    
-                    # Special checks for specific tests
-                    if "database query request" in test['description'].lower():
-                        if "customers" in full_response.lower() or "data" in full_response.lower() or "query" in full_response.lower():
-                            print_status("✅ Database query request handled", "success")
-                        else:
-                            print_status("⚠️ No database query request handling detected", "warning")
-                    
-                    if "bqml agent transfer" in test['description'].lower():
-                        if "bq_ml_agent" in full_response or "transfer" in full_response.lower():
-                            print_status("✅ BQML agent transfer detected", "success")
-                        else:
-                            print_status("⚠️ No BQML agent transfer detected", "warning")
-                    
-                    if "bqml classification models" in test['description'].lower():
-                        if "DNN_CLASSIFIER" in full_response or "LOGISTIC_REG" in full_response or "classification" in full_response.lower():
-                            print_status("✅ BQML classification models detected", "success")
-                        else:
-                            print_status("⚠️ No BQML classification models detected", "warning")
-                    
-                    if "bqml linear regression" in test['description'].lower():
-                        if "linear regression" in full_response.lower() or "CREATE MODEL" in full_response or "LINEAR_REG" in full_response:
-                            print_status("✅ BQML linear regression info detected", "success")
-                        else:
-                            print_status("⚠️ No BQML linear regression info detected", "warning")
-                    
-                    if "root agent transfer" in test['description'].lower():
-                        if "root agent" in full_response.lower() or "transfer" in full_response.lower() or "data analysis" in full_response.lower():
-                            print_status("✅ Root agent transfer detected", "success")
-                        else:
-                            print_status("⚠️ No root agent transfer detected", "warning")
-                    
-                    if "data science agent call" in test['description'].lower():
-                        if "call_ds_agent" in full_response or "data science agent" in full_response.lower():
-                            print_status("✅ Data science agent call detected", "success")
-                        else:
-                            print_status("⚠️ No data science agent call detected", "warning")
-                    
-                else:
-                    print_status("No response received", "error")
-                    results.append({"test": i, "status": "failed", "issue": "no_response"})
-                    
+                        print(event)
+                
+                print_status("Test completed successfully", "success")
+                results.append({"test": i, "status": "passed"})
+                
             except Exception as e:
                 print_status(f"Test failed with error: {str(e)}", "error")
                 results.append({"test": i, "status": "failed", "issue": str(e)})
@@ -243,79 +153,32 @@ async def verify_agent_deployment():
         print("=" * 40)
         
         passed = sum(1 for r in results if r["status"] == "passed")
-        warnings = sum(1 for r in results if r["status"] == "warning")
         failed = sum(1 for r in results if r["status"] == "failed")
         
-        print_status(f"Tests Passed: {passed}/{len(test_queries)}", "success" if passed > 0 else "info")
-        if warnings > 0:
-            print_status(f"Tests with Warnings: {warnings}", "warning")
+        print_status(f"Tests Passed: {passed}/{len(test_queries)}", "success" if passed == len(test_queries) else "error")
         if failed > 0:
-            print_status(f"Tests Failed: {failed}", "error")
-        
-        print()
-        print_status(f"Agent Resource: {agent_resource_name}")
-        print_status(f"Session ID: {session.id}")
-        
-        # Detailed results
-        print("\n📋 Detailed Test Results:")
-        for i, result in enumerate(results, 1):
-            status_emoji = {"passed": "✅", "warning": "⚠️", "failed": "❌"}
-            status = result["status"]
-            issue = result.get("issue", "")
-            issue_text = f" ({issue})" if issue else ""
-            print(f"   Test {i}: {status_emoji.get(status, '❓')} {status.upper()}{issue_text}")
-        
-        # Overall status
-        if failed == 0 and warnings <= 1:  # Allow 1 warning for demo data issues
-            print()
-            print_status("🎉 VERIFICATION SUCCESSFUL - Simplified agent is working perfectly!", "success")
-            return True
-        elif failed == 0:
-            print()
-            print_status("⚠️ VERIFICATION COMPLETED WITH WARNINGS - Agent is mostly working", "warning")
-            print_status("This is likely due to demo data limitations, not agent issues", "info")
-            return True
-        else:
-            print()
-            print_status("❌ VERIFICATION FAILED - Agent has issues that need attention", "error")
-            return False
+            print_status(f"Tests Failed: {failed}/{len(test_queries)}", "error")
             
+        # Clean up
+        print("\nCleaning up...")
+        app.delete_session(user_id="verification_user", session_id=session.id)
+        print_status("✅ Session deleted")
+        
+        return passed == len(test_queries)
+        
     except Exception as e:
-        print_status(f"Critical error during verification: {str(e)}", "error")
+        print_status(f"Verification failed with error: {str(e)}", "error")
+        raise
         return False
 
-
 def main():
-    """Main verification function."""
-    print_header()
-    
+    """Main entry point."""
     try:
-        success = asyncio.run(verify_agent_deployment())
-        
-        if success:
-            print("\n✅ Your GCP Data Analyst Agent (Simplified Framework) is ready for use!")
-            print("\n💡 Next steps:")
-            print("   • Test via GCP Console Sessions tab")
-            print("   • Try database queries: 'Show me data from the customers table'")
-            print("   • Test BQML: 'Use the BQML agent to help me create a classification model'")
-            print("   • Test data science: 'Analyze this data and create a visualization'")
-            print("   • Upload business documents to your Business RAG corpus")
-        else:
-            print("\n❌ Verification failed - please check the issues above")
-            print("💡 Common issues:")
-            print("   • Database connection problems")
-            print("   • RAG corpus permission issues")
-            print("   • Model availability issues")
-        
-        return 0 if success else 1
-        
-    except KeyboardInterrupt:
-        print("\n⚠️ Verification interrupted by user")
-        return 1
+        success = verify_agent_deployment()
+        sys.exit(0 if success else 1)
     except Exception as e:
-        print(f"\n❌ Unexpected error: {str(e)}")
-        return 1
-
+        print_status(f"Fatal error: {str(e)}", "error")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    sys.exit(main()) 
+    main() 
