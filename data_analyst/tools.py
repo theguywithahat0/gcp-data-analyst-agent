@@ -23,6 +23,7 @@ from google.adk.tools.agent_tool import AgentTool
 
 from .sub_agents import ds_agent, db_agent
 from .sub_agents.search import search_agent
+from .sub_agents.rag import rag_agent
 
 
 async def call_db_agent(
@@ -85,3 +86,18 @@ async def call_search_agent(
     )
     tool_context.state["search_agent_output"] = search_agent_output
     return search_agent_output
+
+
+async def call_rag_agent(
+    question: str,
+    tool_context: ToolContext,
+):
+    """Tool to call RAG agent for retrieving information from the knowledge corpus."""
+    
+    agent_tool = AgentTool(agent=rag_agent)
+    
+    rag_agent_output = await agent_tool.run_async(
+        args={"request": question}, tool_context=tool_context
+    )
+    tool_context.state["rag_agent_output"] = rag_agent_output
+    return rag_agent_output

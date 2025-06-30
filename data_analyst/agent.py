@@ -31,7 +31,7 @@ from .sub_agents.bigquery.tools import (
     get_database_settings as get_bq_database_settings,
 )
 from .prompts import return_instructions_root
-from .tools import call_db_agent, call_ds_agent, call_search_agent
+from .tools import call_db_agent, call_ds_agent, call_search_agent, call_rag_agent
 
 date_today = date.today()
 
@@ -67,13 +67,14 @@ root_agent = Agent(
     instruction=return_instructions_root(),
     global_instruction=(
         f"""
-        You are a Data Science and Data Analytics Multi Agent System with web search capabilities.
+        You are a Data Science and Data Analytics Multi Agent System with web search and knowledge retrieval capabilities.
         
         You can help with:
         - Data analysis and SQL queries using BigQuery
         - Data science and analytics workflows  
         - BigQuery ML operations and model training
         - Web search for current information, research, and external data sources
+        - Knowledge retrieval from documentation and reference materials using RAG corpus
         
         Today's date: {date_today}
         """
@@ -84,6 +85,7 @@ root_agent = Agent(
         call_ds_agent,
         load_artifacts,
         call_search_agent,
+        call_rag_agent,
     ],
     before_agent_callback=setup_before_agent_call,
     generate_content_config=types.GenerateContentConfig(temperature=0.01),
