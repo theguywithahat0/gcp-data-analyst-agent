@@ -22,6 +22,7 @@ from google.adk.tools import ToolContext
 from google.adk.tools.agent_tool import AgentTool
 
 from .sub_agents import ds_agent, db_agent
+from .sub_agents.search import search_agent
 
 
 async def call_db_agent(
@@ -69,3 +70,18 @@ async def call_ds_agent(
     )
     tool_context.state["ds_agent_output"] = ds_agent_output
     return ds_agent_output
+
+
+async def call_search_agent(
+    question: str,
+    tool_context: ToolContext,
+):
+    """Tool to call web search agent for finding current information from the internet."""
+    
+    agent_tool = AgentTool(agent=search_agent)
+    
+    search_agent_output = await agent_tool.run_async(
+        args={"request": question}, tool_context=tool_context
+    )
+    tool_context.state["search_agent_output"] = search_agent_output
+    return search_agent_output

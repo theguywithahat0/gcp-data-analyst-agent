@@ -24,14 +24,14 @@ from google.genai import types
 
 from google.adk.agents import Agent
 from google.adk.agents.callback_context import CallbackContext
-from google.adk.tools import load_artifacts, google_search
+from google.adk.tools import load_artifacts
 
 from .sub_agents import bqml_agent
 from .sub_agents.bigquery.tools import (
     get_database_settings as get_bq_database_settings,
 )
 from .prompts import return_instructions_root
-from .tools import call_db_agent, call_ds_agent
+from .tools import call_db_agent, call_ds_agent, call_search_agent
 
 date_today = date.today()
 
@@ -83,7 +83,7 @@ root_agent = Agent(
         call_db_agent,
         call_ds_agent,
         load_artifacts,
-        google_search,
+        call_search_agent,
     ],
     before_agent_callback=setup_before_agent_call,
     generate_content_config=types.GenerateContentConfig(temperature=0.01),
