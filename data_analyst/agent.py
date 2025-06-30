@@ -24,7 +24,7 @@ from google.genai import types
 
 from google.adk.agents import Agent
 from google.adk.agents.callback_context import CallbackContext
-from google.adk.tools import load_artifacts
+from google.adk.tools import load_artifacts, google_search
 
 from .sub_agents import bqml_agent
 from .sub_agents.bigquery.tools import (
@@ -67,8 +67,15 @@ root_agent = Agent(
     instruction=return_instructions_root(),
     global_instruction=(
         f"""
-        You are a Data Science and Data Analytics Multi Agent System.
-        Todays date: {date_today}
+        You are a Data Science and Data Analytics Multi Agent System with web search capabilities.
+        
+        You can help with:
+        - Data analysis and SQL queries using BigQuery
+        - Data science and analytics workflows  
+        - BigQuery ML operations and model training
+        - Web search for current information, research, and external data sources
+        
+        Today's date: {date_today}
         """
     ),
     sub_agents=[bqml_agent],
@@ -76,6 +83,7 @@ root_agent = Agent(
         call_db_agent,
         call_ds_agent,
         load_artifacts,
+        google_search,
     ],
     before_agent_callback=setup_before_agent_call,
     generate_content_config=types.GenerateContentConfig(temperature=0.01),
